@@ -62,7 +62,7 @@ def PlotEnergy(E_k):
     plt.title('Total energy over time')
     plt.xlabel('time')
     plt.ylabel('total energy')
-    plt.ylim([0.9, 1.1])
+    #plt.ylim([0.9, 1.1])
     plt.plot(E_k)
     plt.savefig("energy.png")
 
