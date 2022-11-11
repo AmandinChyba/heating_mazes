@@ -10,7 +10,7 @@ def create_maze(seed, Lx, Ly):
     m.generator = DungeonRooms(Lx, Ly)
     m.generate()
     maze = m.grid
-    maze = maze.astype('float32')
+    maze = maze.astype('float64')
     return maze
 
 
