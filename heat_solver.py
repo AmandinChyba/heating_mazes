@@ -6,15 +6,15 @@ import time
 import matplotlib.pyplot as plt
 
 # parameters
-seed = int(time.time())
-#seed = 1667963409
+#seed = int(time.time())
+seed = 1668224834 # L = 5
 print('seed:', seed)
 
-L = 30
-T = 5000
+L = 7
+T = 2000
 alpha = 1
 dx = 1
-initial_value = 0.5
+initial_value = 0.0
 
 dt = (dx ** 2)/(4 * alpha)
 gamma = (alpha * dt) / (dx ** 2)
@@ -40,18 +40,15 @@ u = np.tile(u, (T, 1, 1))
 u[0, start[0], start[1]] = 1.0
 u[0, end[0], end[1]] = 0.0
 
+
 def SolveHeat(u):
     E = np.zeros((T-1))
     
     done = False
-    max_time = T
+    max_time = T-1
     t = 0
-    #u1_spot = []
-    #u2_spot = []
     inter_coord = [0,0]
     while t < max_time:
-        #u1_spot.append(u[t-2,start[0],start[1]+1])
-        #u2_spot.append(u[t-2,start[0],start[1]-1])
         energy_sum = 0
         
         for i,j in idx:
@@ -65,10 +62,11 @@ def SolveHeat(u):
             if u2 == -1.0: u2 = u0
             if u3 == -1.0: u3 = u0
             if u4 == -1.0: u4 = u0
-
+            
             u[t+1,i,j] = gamma * (u1 + u2 + u3 + u4 - 4*u0) + u0
             energy_sum += u0
-        
+            
+            '''
             # check if we should stop running
             if not done:
                 smaller = False
@@ -86,43 +84,83 @@ def SolveHeat(u):
                     print('intersection at', i, j)
                     print('max time:', max_time)
                     print("found a path at t =", t)
-                
+            '''  
 
         E[t] = energy_sum
         # enforce periodic boundary conditions
-        #u[t+1,start[0],start[1]] += u[t+1,end[0],end[1]] # generator
-        u[t+1,start[0],start[1]] = 1.0 # generator
+        u[t+1,start[0],start[1]] += u[t+1,end[0],end[1]] # generator
         u[t+1,end[0],end[1]] = 0.0 # sink
 
         t += 1
-        if t == T:
+        if t == T-1:
             print('reached maximum time T =', t)
             break
 
+    return u, E, max_time, inter_coord
+
+def plotoptix_data(u):
+    u_k = u.copy()
+
+    B = np.zeros(u_k.shape)
     '''
-    plt.plot(u1_spot)
-    plt.plot(u2_spot)
-    plt.legend(['First line', 'Second line'])
-    plt.show()
-    
-    print('start at', start[0], start[1], u[t-2,start[0],start[1]])
-    print(start[0],start[1]+1, u[t-2,start[0],start[1]+1])
-    print(start[0],start[1]-1, u[t-2,start[0],start[1]-1])
+    rise_time = 10
+    for t in range(T-1):
+        for i,j in idx:
+            if u[t+1,i,j] != initial_value and u[t,i,j] == initial_value:
+                B[t+1:t+rise_time+1,i,j] = np.linspace(1/rise_time,1,num=rise_time)
+                B[t+rise_time+1:t+2*rise_time+1,i,j] = 1 - np.linspace(1/rise_time,1,num=rise_time)
     '''
 
-    return u, E, max_time, inter_coord
+    tol = 10e-5
+    height_change = 0.02
+    for t in range(T-1):
+        for i,j in idx:
+            u0 = u_k[t][i][j]
+            u1 = u_k[t][i+1][j]
+            u2 = u_k[t][i-1][j]
+            u3 = u_k[t][i][j+1]
+            u4 = u_k[t][i][j-1]
+            if u1 == -1.0: u1 = u0
+            if u2 == -1.0: u2 = u0
+            if u3 == -1.0: u3 = u0
+            if u4 == -1.0: u4 = u0
+            diff_count = 0
+            if abs(u0 - u1) > tol: diff_count += 1
+            if abs(u0 - u2) > tol: diff_count += 1
+            if abs(u0 - u3) > tol: diff_count += 1
+            if abs(u0 - u4) > tol: diff_count += 1
+            
+            if  diff_count >= 2:
+                if B[t,i,j] < 1:
+                    B[t+1,i,j] = B[t,i,j] + height_change
+                else:
+                    B[t+1,i,j] = B[t,i,j]
+            else:
+                if B[t,i,j] > 0:
+                    B[t+1,i,j] = B[t,i,j] - height_change
+   
+    # save B and u in .npy file
+    #np.save([u, B], 'maze_data_plotoptix.npy') 
+    
+    return B
+
 
 # solve the PDE
 u, E, max_time, inter_coord = SolveHeat(u)
 
+
+# save data for plotoptix
+B = plotoptix_data(u)
+
 # create plot
 PlotEnergy(E)
 PlotMaze(maze, start, end)
-#PlotShortestPath(u[max_time-1], maze, start, end)
-PlotShortestPath1(u[max_time-1], maze, inter_coord, start)
-PlotShortestPath2(u[max_time-1], maze, inter_coord, end)
+PlotShortestPath2(u[max_time-1], maze, start, end)
+#PlotShortestPath1(u[max_time-1], maze, inter_coord, start)
+#PlotShortestPath2(u[max_time-1], maze, inter_coord, end)
 
 # create animation
-AnimateSolution(u[:max_time-1], start, end, max_time-1, frame_skip=20)
+AnimateSolution(u[:max_time-1], start, end, max_time-1, frame_skip=20, 'solution.gif')
+AnimateSolution(B, start, end, T-1, frame_skip=20, file_name='heat_change.gif')
 
 

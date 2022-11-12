@@ -86,7 +86,9 @@ def PlotHeatMap(u_k, k, start, end):
     #u_k[end[0],end[1]] = 1.2
     
     plt.clf()
-    plt.pcolormesh(u_k, cmap='jet', vmin=-0.2)
+    #plt.pcolormesh(u_k, cmap='jet', vmin=-0.2)
+    plt.pcolormesh(u_k, cmap='jet')
+    plt.title(str(k))
     plt.colorbar()
     return plt
    
@@ -99,7 +101,7 @@ def PlotEnergy(E_k):
     plt.plot(E_k)
     plt.savefig("energy.png")
 
-def AnimateSolution(u, start, end, T, frame_skip=5):
+def AnimateSolution(u, start, end, T, frame_skip=5, file_name='solution.gif'):
     u = u.copy()
 
     def animate(k):
@@ -107,8 +109,8 @@ def AnimateSolution(u, start, end, T, frame_skip=5):
         PlotHeatMap(u[i], i, start, end)
 
     anim = animation.FuncAnimation(plt.figure(), animate, interval=1, 
-                                   frames=int(T/frame_skip), repeat=False)
-    anim.save("solution.gif")
+                                   frames=int(T/frame_skip))
+    anim.save(file_name)
 
 
 
